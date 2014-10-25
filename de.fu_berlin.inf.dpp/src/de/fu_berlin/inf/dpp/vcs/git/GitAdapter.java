@@ -1,9 +1,11 @@
 package de.fu_berlin.inf.dpp.vcs.git;
 
+import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
 import de.fu_berlin.inf.dpp.activities.VCSActivity;
@@ -14,6 +16,11 @@ import de.fu_berlin.inf.dpp.vcs.VCSAdapter;
 import de.fu_berlin.inf.dpp.vcs.VCSResourceInfo;
 
 public class GitAdapter extends VCSAdapter {
+
+    static final String identifier = "org.eclipse.egit.core.GitProvider";
+
+    @SuppressWarnings("hiding")
+    protected static final Logger log = Logger.getLogger(GitAdapter.class);
 
     public GitAdapter(RepositoryProviderType provider) {
         super(provider);
@@ -59,8 +66,12 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public boolean isInManagedProject(
         org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
-        return false;
+        IProject project = resource.getProject();
+        if (!RepositoryProvider.isShared(project)) {
+            return false;
+        }
+        return RepositoryProvider.getProvider(project).getID()
+            .equals(identifier);
     }
 
     @Override
