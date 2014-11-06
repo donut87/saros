@@ -1,10 +1,15 @@
 package de.fu_berlin.inf.dpp.vcs.git;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
@@ -59,8 +64,7 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public boolean isManaged(org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
-        return false;
+        return getGitRepoForResource(resource) != null;
     }
 
     @Override
@@ -163,4 +167,24 @@ public class GitAdapter extends VCSAdapter {
         return null;
     }
 
+    private Repository getGitRepoForResource(
+        org.eclipse.core.resources.IResource resource) {
+        if (resource == null) {
+            log.debug("Null Resource given.");
+            return null;
+        }
+        File f = new File(resource.getLocation().toOSString());
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        builder.findGitDir(f);
+        try {
+            if (builder.getGitDir() != null) {
+                return builder.build();
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            log.debug("The resource " + resource.getLocation().toOSString()
+                + " was not found in file system.", e);
+        }
+        return null;
+    }
 }
