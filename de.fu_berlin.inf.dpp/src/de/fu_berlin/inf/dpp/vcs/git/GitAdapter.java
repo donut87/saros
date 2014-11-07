@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -21,8 +22,8 @@ import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
 import de.fu_berlin.inf.dpp.activities.VCSActivity;
-import de.fu_berlin.inf.dpp.filesystem.EclipseResourceImpl;
-import de.fu_berlin.inf.dpp.filesystem.IResource;
+import de.fu_berlin.inf.dpp.filesystem.ResourceAdapterFactory;
+//import de.fu_berlin.inf.dpp.filesystem.IResource;
 import de.fu_berlin.inf.dpp.negotiation.FileList;
 import de.fu_berlin.inf.dpp.session.ISarosSession;
 import de.fu_berlin.inf.dpp.vcs.VCSAdapter;
@@ -37,7 +38,6 @@ public class GitAdapter extends VCSAdapter {
 
     public GitAdapter(RepositoryProviderType provider) {
         super(provider);
-        // TODO Auto-generated constructor stub
     }
 
     @Override
@@ -49,18 +49,6 @@ public class GitAdapter extends VCSAdapter {
     public String getRepositoryString(IResource resource) {
         Repository gitRepo = getGitRepoForResource(resource);
         return (gitRepo == null) ? null : gitRepo.getWorkTree().getPath();
-    }
-
-    @Override
-    public VCSResourceInfo getResourceInfo(IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public VCSResourceInfo getCurrentResourceInfo(IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -83,19 +71,6 @@ public class GitAdapter extends VCSAdapter {
         }
         return RepositoryProvider.getProvider(project).getID()
             .equals(identifier);
-    }
-
-    @Override
-    public String getRepositoryString(
-        org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public String getUrl(org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     @Override
@@ -209,8 +184,7 @@ public class GitAdapter extends VCSAdapter {
         return null;
     }
 
-    private Repository getGitRepoForResource(
-        org.eclipse.core.resources.IResource resource) {
+    private Repository getGitRepoForResource(IResource resource) {
         if (resource == null) {
             log.debug("Null Resource given.");
             return null;
@@ -229,30 +203,27 @@ public class GitAdapter extends VCSAdapter {
         return null;
     }
 
-    private Repository getGitRepoForResource(IResource r) {
-        if (r == null) {
-            log.debug("Null Resource given.");
-            return null;
-        }
-        if (!(r instanceof EclipseResourceImpl)) {
-            // since there is no implementation 'toOSString()' this won't work
-            // any other way
-            return null;
-        }
-        org.eclipse.core.resources.IResource resource = ((EclipseResourceImpl) r)
-            .getDelegate();
-        File f = new File(resource.getLocation().toOSString());
-        FileRepositoryBuilder builder = new FileRepositoryBuilder();
-        builder.findGitDir(f);
-        try {
-            if (builder.getGitDir() != null) {
-                return builder.build();
-            }
-        } catch (IOException e) {
-            log.debug("The resource " + resource.getLocation().toOSString()
-                + " was not found in file system.", e);
-        }
-        return null;
+    @Override
+    public String getRepositoryString(
+        de.fu_berlin.inf.dpp.filesystem.IResource resource) {
+        return getRepositoryString(ResourceAdapterFactory.convertBack(resource));
+    }
 
+    @Override
+    public VCSResourceInfo getResourceInfo(
+        de.fu_berlin.inf.dpp.filesystem.IResource resource) {
+        return getResourceInfo(ResourceAdapterFactory.convertBack(resource));
+    }
+
+    @Override
+    public VCSResourceInfo getCurrentResourceInfo(
+        de.fu_berlin.inf.dpp.filesystem.IResource resource) {
+        return getCurrentResourceInfo(ResourceAdapterFactory
+            .convertBack(resource));
+    }
+
+    @Override
+    public String getUrl(de.fu_berlin.inf.dpp.filesystem.IResource resource) {
+        return getUrl(ResourceAdapterFactory.convertBack(resource));
     }
 }
