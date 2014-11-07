@@ -2,6 +2,7 @@ package de.fu_berlin.inf.dpp.vcs.git;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
@@ -53,8 +54,18 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public String getUrl(IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
+        Repository gitRepo = getGitRepoForResource(resource);
+        Set<String> remoteNames = gitRepo.getRemoteNames();
+        if (remoteNames.isEmpty()) {
+            return null;
+        }
+        // origin is the most common remote
+        String remoteName = "origin";
+        if (!remoteNames.contains("origin")) {
+            // there is no origin => take the first that is there
+            remoteName = (String) remoteNames.toArray()[0];
+        }
+        return gitRepo.getConfig().getString("remote", remoteName, "url");
     }
 
     @Override
@@ -84,20 +95,37 @@ public class GitAdapter extends VCSAdapter {
     public void update(org.eclipse.core.resources.IResource resource,
         String targetRevision, IProgressMonitor monitor) {
         // In git this is of course 'git checkout'
-
+        // TODO figure out how to make jgit do this checkout
     }
 
     @Override
     public void switch_(org.eclipse.core.resources.IResource resource,
         String url, String revision, IProgressMonitor monitor) {
-        // TODO Auto-generated method stub
+        // In git this is of course 'git checkout'
         Repository gitRepo = this.getGitRepoForResource(resource);
         if (gitRepo == null) {
             return;
         }
         Git git = new Git(gitRepo);
-        git.checkout().setStartPoint(revision)
-            .addPath(resource.getLocation().toOSString());
+        try {
+            git.checkout().setStartPoint(revision)
+                .addPath(resource.getLocation().toOSString()).call();
+        } catch (RefAlreadyExistsException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (RefNotFoundException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (InvalidRefNameException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (CheckoutConflictException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (GitAPIException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        }
     }
 
     @Override
