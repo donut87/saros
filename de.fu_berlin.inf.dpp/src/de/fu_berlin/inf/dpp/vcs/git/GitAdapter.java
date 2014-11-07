@@ -5,15 +5,23 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.CheckoutConflictException;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.InvalidRefNameException;
+import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
+import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
 import de.fu_berlin.inf.dpp.activities.VCSActivity;
+import de.fu_berlin.inf.dpp.filesystem.EclipseResourceImpl;
 import de.fu_berlin.inf.dpp.filesystem.IResource;
 import de.fu_berlin.inf.dpp.negotiation.FileList;
 import de.fu_berlin.inf.dpp.session.ISarosSession;
@@ -34,14 +42,13 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public String getID() {
-        // TODO Auto-generated method stub
-        return null;
+        return identifier;
     }
 
     @Override
     public String getRepositoryString(IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
+        Repository gitRepo = getGitRepoForResource(resource);
+        return (gitRepo == null) ? null : gitRepo.getWorkTree().getPath();
     }
 
     @Override
@@ -101,7 +108,7 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public void update(org.eclipse.core.resources.IResource resource,
         String targetRevision, IProgressMonitor monitor) {
-        // TODO Auto-generated method stub
+        // In git this is of course 'git checkout'
 
     }
 
@@ -109,13 +116,48 @@ public class GitAdapter extends VCSAdapter {
     public void switch_(org.eclipse.core.resources.IResource resource,
         String url, String revision, IProgressMonitor monitor) {
         // TODO Auto-generated method stub
-
+        Repository gitRepo = this.getGitRepoForResource(resource);
+        if (gitRepo == null) {
+            return;
+        }
+        Git git = new Git(gitRepo);
+        git.checkout().setStartPoint(revision)
+            .addPath(resource.getLocation().toOSString());
     }
 
     @Override
     public void revert(org.eclipse.core.resources.IResource resource,
         SubMonitor monitor) {
-        // TODO Auto-generated method stub
+        // In git this is of course 'git checkout'
+        Repository gitRepo = this.getGitRepoForResource(resource);
+        if (gitRepo == null) {
+            return;
+        }
+        Git git = new Git(gitRepo);
+        try {
+            git.checkout().addPath(resource.getLocation().toOSString()).call();
+        } catch (RefAlreadyExistsException e1) {
+            // TODO Auto-generated catch block
+            log.debug("", e1);
+        } catch (RefNotFoundException e1) {
+            // TODO Auto-generated catch block
+            log.debug("", e1);
+        } catch (InvalidRefNameException e1) {
+            // TODO Auto-generated catch block
+            log.debug("", e1);
+        } catch (CheckoutConflictException e1) {
+            // TODO Auto-generated catch block
+            log.debug("Checkout not possible due to conflicts.", e1);
+        } catch (GitAPIException e1) {
+            // TODO Auto-generated catch block
+            log.debug("", e1);
+        }
+        try {
+            resource.refreshLocal(
+                org.eclipse.core.resources.IResource.DEPTH_INFINITE, null);
+        } catch (CoreException e) {
+            log.error("Refresh failed", e);
+        }
 
     }
 
@@ -181,10 +223,36 @@ public class GitAdapter extends VCSAdapter {
                 return builder.build();
             }
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             log.debug("The resource " + resource.getLocation().toOSString()
                 + " was not found in file system.", e);
         }
         return null;
+    }
+
+    private Repository getGitRepoForResource(IResource r) {
+        if (r == null) {
+            log.debug("Null Resource given.");
+            return null;
+        }
+        if (!(r instanceof EclipseResourceImpl)) {
+            // since there is no implementation 'toOSString()' this won't work
+            // any other way
+            return null;
+        }
+        org.eclipse.core.resources.IResource resource = ((EclipseResourceImpl) r)
+            .getDelegate();
+        File f = new File(resource.getLocation().toOSString());
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        builder.findGitDir(f);
+        try {
+            if (builder.getGitDir() != null) {
+                return builder.build();
+            }
+        } catch (IOException e) {
+            log.debug("The resource " + resource.getLocation().toOSString()
+                + " was not found in file system.", e);
+        }
+        return null;
+
     }
 }
