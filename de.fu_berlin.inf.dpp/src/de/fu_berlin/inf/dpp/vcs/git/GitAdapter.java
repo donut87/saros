@@ -17,6 +17,10 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRefNameException;
 import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.api.errors.RefNotFoundException;
+import org.eclipse.jgit.errors.AmbiguousObjectException;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.eclipse.jgit.errors.RevisionSyntaxException;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.team.core.RepositoryProvider;
@@ -95,7 +99,38 @@ public class GitAdapter extends VCSAdapter {
     public void update(org.eclipse.core.resources.IResource resource,
         String targetRevision, IProgressMonitor monitor) {
         // In git this is of course 'git checkout'
-        // TODO figure out how to make jgit do this checkout
+        Repository repo = getGitRepoForResource(resource);
+        Git git = new Git(repo);
+        try {
+            File workTree = repo.getWorkTree();
+            git.checkout()
+                .setStartPoint(targetRevision)
+                .addPath(
+                    resource.getLocation().toOSString()
+                        .replace(workTree.getAbsolutePath(), "").substring(1))
+                .call();
+        } catch (RefAlreadyExistsException e1) {
+            log.debug(
+                "This cannot happen here. We are not trying to create a new branch.",
+                e1);
+        } catch (RefNotFoundException e1) {
+            // Seems unlikely but is possible in a headless state
+            log.debug("Start Point invalid. Could not find 'HEAD'.", e1);
+        } catch (InvalidRefNameException e1) {
+            // Highly unlikely
+            log.debug("Invalid Reference 'HEAD'", e1);
+        } catch (CheckoutConflictException e1) {
+            // Highly unlikely
+            log.debug("Checkout not possible due to conflicts.", e1);
+        } catch (GitAPIException e1) {
+            log.debug("We are doomed...", e1);
+        }
+        try {
+            resource.refreshLocal(
+                org.eclipse.core.resources.IResource.DEPTH_INFINITE, null);
+        } catch (CoreException e) {
+            log.error("Refresh failed", e);
+        }
     }
 
     @Override
@@ -111,20 +146,21 @@ public class GitAdapter extends VCSAdapter {
             git.checkout().setStartPoint(revision)
                 .addPath(resource.getLocation().toOSString()).call();
         } catch (RefAlreadyExistsException e) {
-            // TODO Auto-generated catch block
+            // Cannot happen. We are not creating a new branch here.
             log.debug("", e);
         } catch (RefNotFoundException e) {
-            // TODO Auto-generated catch block
-            log.debug("", e);
+            // Can happen. But shouldn't!
+            log.debug(
+                "Branch was not found on this end of the line. Strange...", e);
         } catch (InvalidRefNameException e) {
-            // TODO Auto-generated catch block
+            // Should not happen. The reference already exists and is validated.
             log.debug("", e);
         } catch (CheckoutConflictException e) {
-            // TODO Auto-generated catch block
+            // Since we don't try to merge and are just checking out, this
+            // should not happen.
             log.debug("", e);
         } catch (GitAPIException e) {
-            // TODO Auto-generated catch block
-            log.debug("", e);
+            log.debug("FUCK! We are doomed!", e);
         }
     }
 
@@ -138,22 +174,28 @@ public class GitAdapter extends VCSAdapter {
         }
         Git git = new Git(gitRepo);
         try {
-            git.checkout().addPath(resource.getLocation().toOSString()).call();
+            File workTree = gitRepo.getWorkTree();
+            git.checkout()
+                .setStartPoint(Constants.HEAD)
+                .addPath(
+                    resource.getLocation().toOSString()
+                        .replace(workTree.getAbsolutePath(), "").substring(1))
+                .call();
         } catch (RefAlreadyExistsException e1) {
-            // TODO Auto-generated catch block
-            log.debug("", e1);
+            log.debug(
+                "This cannot happen here. We are not trying to create a new branch.",
+                e1);
         } catch (RefNotFoundException e1) {
-            // TODO Auto-generated catch block
-            log.debug("", e1);
+            // Seems unlikely but is possible in a headless state
+            log.debug("Start Point invalid. Could not find 'HEAD'.", e1);
         } catch (InvalidRefNameException e1) {
-            // TODO Auto-generated catch block
-            log.debug("", e1);
+            // Highly unlikely
+            log.debug("Invalid Reference 'HEAD'", e1);
         } catch (CheckoutConflictException e1) {
-            // TODO Auto-generated catch block
+            // Highly unlikely
             log.debug("Checkout not possible due to conflicts.", e1);
         } catch (GitAPIException e1) {
-            // TODO Auto-generated catch block
-            log.debug("", e1);
+            log.debug("We are doomed...", e1);
         }
         try {
             resource.refreshLocal(
@@ -174,7 +216,28 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public VCSResourceInfo getCurrentResourceInfo(
         org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
+        Repository repo = getGitRepoForResource(resource);
+        String url = "";
+        if (repo.getConfig().getSubsections("remote").contains("origin")) {
+            url = repo.getConfig().getString("remote", "origin", "url");
+        } else {
+            String name = repo.getConfig().getSubsections("remote").iterator()
+                .next();
+            url = repo.getConfig().getString("remote", name, "url");
+        }
+        try {
+            return new VCSResourceInfo(url, repo.resolve(Constants.HEAD).name());
+        } catch (RevisionSyntaxException e) {
+            log.debug("Constant was not correctly formatted. WTF???", e);
+        } catch (AmbiguousObjectException e) {
+            // Cannot happen since ObjectId.name() is always the long SHA1-ID
+            log.debug("", e);
+        } catch (IncorrectObjectTypeException e) {
+            // Cannot happe either. Saros only wprks on text files...
+            log.debug("", e);
+        } catch (IOException e) {
+            log.debug("FUCK! We are doomed!", e);
+        }
         return null;
     }
 
