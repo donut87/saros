@@ -2,37 +2,50 @@ package de.fu_berlin.inf.dpp.vcs.git;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.egit.core.op.CloneOperation;
+import org.eclipse.egit.core.project.GitProjectData;
+import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.CheckoutConflictException;
+import org.eclipse.jgit.api.InitCommand;
+import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRefNameException;
+import org.eclipse.jgit.api.errors.InvalidRemoteException;
+import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.RevisionSyntaxException;
+import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.FetchResult;
+import org.eclipse.jgit.transport.URIish;
 import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
 import de.fu_berlin.inf.dpp.activities.VCSActivity;
 import de.fu_berlin.inf.dpp.filesystem.ResourceAdapterFactory;
-//import de.fu_berlin.inf.dpp.filesystem.IResource;
 import de.fu_berlin.inf.dpp.negotiation.FileList;
 import de.fu_berlin.inf.dpp.session.ISarosSession;
 import de.fu_berlin.inf.dpp.vcs.VCSAdapter;
 import de.fu_berlin.inf.dpp.vcs.VCSResourceInfo;
+
+//import de.fu_berlin.inf.dpp.filesystem.IResource;
 
 public class GitAdapter extends VCSAdapter {
 
@@ -59,7 +72,8 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public String getUrl(IResource resource) {
         Repository gitRepo = getGitRepoForResource(resource);
-        Set<String> remoteNames = gitRepo.getRemoteNames();
+        Set<String> remoteNames = gitRepo.getConfig().getSubsections(
+            ConfigConstants.CONFIG_REMOTE_SECTION);
         if (remoteNames.isEmpty()) {
             return null;
         }
@@ -74,7 +88,8 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public boolean isManaged(org.eclipse.core.resources.IResource resource) {
-        return getGitRepoForResource(resource) != null;
+        // return getGitRepoForResource(resource) != null;
+        return true;
     }
 
     @Override
@@ -91,39 +106,55 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public IProject checkoutProject(String newProjectName, FileList fileList,
         IProgressMonitor monitor) throws OperationCanceledException {
-        // TODO Auto-generated method stub
-        return null;
+        IProject result = null;
+        String repoURL = fileList.getProjectInfo().getURL();
+        log.debug("RepoURL: " + repoURL);
+        GitProjectData gpd = new GitProjectData(ResourcesPlugin.getWorkspace()
+            .getRoot().getProject(fileList.getProjectID()));
+        try {
+            CloneOperation co = new CloneOperation(new URIish(repoURL), true,
+                null, gpd.getProject().getFullPath().toFile(), "master",
+                Constants.DEFAULT_REMOTE_NAME, 60);
+            co.run(null);
+        } catch (URISyntaxException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (InvocationTargetException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        }
+        return result;
     }
 
     @Override
     public void update(org.eclipse.core.resources.IResource resource,
         String targetRevision, IProgressMonitor monitor) {
-        // In git this is of course 'git checkout'
+        // In git this is of course 'git reset'
         Repository repo = getGitRepoForResource(resource);
         Git git = new Git(repo);
         try {
             File workTree = repo.getWorkTree();
-            git.checkout()
-                .setStartPoint(targetRevision)
-                .addPath(
-                    resource.getLocation().toOSString()
-                        .replace(workTree.getAbsolutePath(), "").substring(1))
-                .call();
-        } catch (RefAlreadyExistsException e1) {
-            log.debug(
-                "This cannot happen here. We are not trying to create a new branch.",
-                e1);
-        } catch (RefNotFoundException e1) {
-            // Seems unlikely but is possible in a headless state
-            log.debug("Start Point invalid. Could not find 'HEAD'.", e1);
-        } catch (InvalidRefNameException e1) {
-            // Highly unlikely
-            log.debug("Invalid Reference 'HEAD'", e1);
-        } catch (CheckoutConflictException e1) {
-            // Highly unlikely
-            log.debug("Checkout not possible due to conflicts.", e1);
-        } catch (GitAPIException e1) {
-            log.debug("We are doomed...", e1);
+            git.fetch().call();
+            CheckoutCommand checkout = git.checkout()
+                .setStartPoint(targetRevision).setName("master");
+            git.reset().setMode(ResetType.HARD).setRef(targetRevision).call();
+            if (resource.getType() != org.eclipse.core.resources.IResource.PROJECT) {
+                checkout.addPath(resource.getLocation().toOSString()
+                    .replace(workTree.getAbsolutePath(), "").substring(1));
+            }
+            // Ref call = checkout.call();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (JGitInternalException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (InvalidRemoteException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
         }
         try {
             resource.refreshLocal(
@@ -143,6 +174,7 @@ public class GitAdapter extends VCSAdapter {
         }
         Git git = new Git(gitRepo);
         try {
+            FetchResult call = git.fetch().call();
             git.checkout().setStartPoint(revision)
                 .addPath(resource.getLocation().toOSString()).call();
         } catch (RefAlreadyExistsException e) {
@@ -154,10 +186,6 @@ public class GitAdapter extends VCSAdapter {
                 "Branch was not found on this end of the line. Strange...", e);
         } catch (InvalidRefNameException e) {
             // Should not happen. The reference already exists and is validated.
-            log.debug("", e);
-        } catch (CheckoutConflictException e) {
-            // Since we don't try to merge and are just checking out, this
-            // should not happen.
             log.debug("", e);
         } catch (GitAPIException e) {
             log.debug("FUCK! We are doomed!", e);
@@ -191,9 +219,6 @@ public class GitAdapter extends VCSAdapter {
         } catch (InvalidRefNameException e1) {
             // Highly unlikely
             log.debug("Invalid Reference 'HEAD'", e1);
-        } catch (CheckoutConflictException e1) {
-            // Highly unlikely
-            log.debug("Checkout not possible due to conflicts.", e1);
         } catch (GitAPIException e1) {
             log.debug("We are doomed...", e1);
         }
@@ -209,8 +234,8 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public VCSResourceInfo getResourceInfo(
         org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
-        return null;
+        return new VCSResourceInfo(getUrl(resource),
+            getRevisionString(resource));
     }
 
     @Override
@@ -244,8 +269,12 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public void connect(IProject project, String repositoryRoot,
         String directory, IProgressMonitor progress) {
-        // TODO Auto-generated method stub
-
+        if (isInManagedProject(project)) {
+            return;
+        }
+        InitCommand ic = new InitCommand();
+        Git git = ic.setBare(false).setDirectory(new File(directory)).call();
+        log.debug(git);
     }
 
     @Override

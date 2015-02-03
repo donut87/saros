@@ -18,6 +18,7 @@ import de.fu_berlin.inf.dpp.negotiation.FileList;
 import de.fu_berlin.inf.dpp.project.ProjectDeltaVisitor;
 import de.fu_berlin.inf.dpp.project.SharedProject;
 import de.fu_berlin.inf.dpp.session.ISarosSession;
+import de.fu_berlin.inf.dpp.vcs.git.GitAdapter;
 
 /**
  * Interface to an adapter for a Version Control System (Team Provider).
@@ -206,6 +207,9 @@ public abstract class VCSAdapter implements VCSProvider {
         try {
             if (identifier.equals(SubclipseAdapter.identifier)) {
                 return new SubclipseAdapter(provider);
+            }
+            if (identifier.equals("org.eclipse.egit.core.GitProvider")) {
+                return new GitAdapter(provider);
             }
         } catch (NoClassDefFoundError e) {
             // TODO Should we inform the user?

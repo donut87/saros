@@ -762,7 +762,7 @@ public class IncomingProjectNegotiation extends ProjectNegotiation {
             vcs.switch_(resource, remoteURL, remoteRevision,
                 progress.newChild(0, SubMonitor.SUPPRESS_NONE));
         } else if (!remoteRevision.equals(localRevision)
-            && remoteFileList.getPaths().contains(path)) {
+            && (remoteFileList.getPaths().contains(path) || resource.getType() == org.eclipse.core.resources.IResource.PROJECT)) {
             LOG.trace("Updating " + resource.getName() + " from "
                 + localRevision + " to " + remoteRevision);
             vcs.update(resource, remoteRevision,
