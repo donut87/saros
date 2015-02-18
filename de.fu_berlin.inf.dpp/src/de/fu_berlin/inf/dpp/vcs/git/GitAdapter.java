@@ -2,8 +2,6 @@ package de.fu_berlin.inf.dpp.vcs.git;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.URISyntaxException;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -14,9 +12,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
-import org.eclipse.egit.core.op.CloneOperation;
-import org.eclipse.egit.core.project.GitProjectData;
 import org.eclipse.jgit.api.CheckoutCommand;
+import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.InitCommand;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -34,7 +31,6 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.FetchResult;
-import org.eclipse.jgit.transport.URIish;
 import org.eclipse.team.core.RepositoryProvider;
 import org.eclipse.team.core.RepositoryProviderType;
 
@@ -89,7 +85,13 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public boolean isManaged(org.eclipse.core.resources.IResource resource) {
         // return getGitRepoForResource(resource) != null;
-        return true;
+        // return true;
+        IProject project = resource.getProject();
+        if (!RepositoryProvider.isShared(project)) {
+            return false;
+        }
+        return RepositoryProvider.getProvider(project).getID()
+            .equals(identifier);
     }
 
     @Override
@@ -106,27 +108,26 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public IProject checkoutProject(String newProjectName, FileList fileList,
         IProgressMonitor monitor) throws OperationCanceledException {
-        IProject result = null;
-        String repoURL = fileList.getProjectInfo().getURL();
-        log.debug("RepoURL: " + repoURL);
-        GitProjectData gpd = new GitProjectData(ResourcesPlugin.getWorkspace()
-            .getRoot().getProject(fileList.getProjectID()));
+        IProject project = ResourcesPlugin.getWorkspace().getRoot()
+            .getProject(fileList.getProjectID());
         try {
-            CloneOperation co = new CloneOperation(new URIish(repoURL), true,
-                null, gpd.getProject().getFullPath().toFile(), "master",
-                Constants.DEFAULT_REMOTE_NAME, 60);
-            co.run(null);
-        } catch (URISyntaxException e) {
+            project.create(monitor); // we know that the project doesn't exist
+            File f = new File(project.getLocation().toOSString());
+            FileRepositoryBuilder builder = new FileRepositoryBuilder();
+            Repository projectRepo = builder.setGitDir(f).readEnvironment()
+                .findGitDir().build();
+            CloneCommand clone = Git.cloneRepository().setBare(false)
+                .setURI(fileList.getVCSUrl("")).setDirectory(f);
+            Git git = clone.call();
+            git.reset().setRef(fileList.getVCSRevision(""));
+        } catch (CoreException e) {
             // TODO Auto-generated catch block
             log.debug("", e);
-        } catch (InvocationTargetException e) {
-            // TODO Auto-generated catch block
-            log.debug("", e);
-        } catch (InterruptedException e) {
+        } catch (IOException e) {
             // TODO Auto-generated catch block
             log.debug("", e);
         }
-        return result;
+        return project;
     }
 
     @Override
