@@ -28,6 +28,7 @@ import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.RevisionSyntaxException;
 import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.FetchResult;
@@ -132,21 +133,17 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public void update(org.eclipse.core.resources.IResource resource,
-        String targetRevision, IProgressMonitor monitor) {
+        String targetRevision, String targetBranch, IProgressMonitor monitor) {
         // In git this is of course 'git reset'
         Repository repo = getGitRepoForResource(resource);
         Git git = new Git(repo);
         try {
-            File workTree = repo.getWorkTree();
-            git.fetch().call();
-            CheckoutCommand checkout = git.checkout()
-                .setStartPoint(targetRevision).setName("master");
-            git.reset().setMode(ResetType.HARD).setRef(targetRevision).call();
-            if (resource.getType() != org.eclipse.core.resources.IResource.PROJECT) {
-                checkout.addPath(resource.getLocation().toOSString()
-                    .replace(workTree.getAbsolutePath(), "").substring(1));
-            }
-            // Ref call = checkout.call();
+            git.fetch().call(); // update current tree
+            git.reset().setMode(ResetType.HARD).call(); // reset so that the
+                                                        // checkout works
+            CheckoutCommand checkout = git.checkout().setName(targetBranch)
+                .setStartPoint(targetRevision);
+            Ref call = checkout.call();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             log.debug("", e);
@@ -154,6 +151,15 @@ public class GitAdapter extends VCSAdapter {
             // TODO Auto-generated catch block
             log.debug("", e);
         } catch (InvalidRemoteException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (RefAlreadyExistsException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (RefNotFoundException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (InvalidRefNameException e) {
             // TODO Auto-generated catch block
             log.debug("", e);
         }
@@ -167,7 +173,7 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public void switch_(org.eclipse.core.resources.IResource resource,
-        String url, String revision, IProgressMonitor monitor) {
+        String url, String revision, IProgressMonitor monitor, String branch) {
         // In git this is of course 'git checkout'
         Repository gitRepo = this.getGitRepoForResource(resource);
         if (gitRepo == null) {
@@ -176,8 +182,9 @@ public class GitAdapter extends VCSAdapter {
         Git git = new Git(gitRepo);
         try {
             FetchResult call = git.fetch().call();
-            git.checkout().setStartPoint(revision)
-                .addPath(resource.getLocation().toOSString()).call();
+            git.reset().setMode(ResetType.HARD).call();
+            Ref checkoutCall = git.checkout().setName(branch).call();
+            resource.refreshLocal(IResource.DEPTH_INFINITE, null);
         } catch (RefAlreadyExistsException e) {
             // Cannot happen. We are not creating a new branch here.
             log.debug("", e);
@@ -190,6 +197,12 @@ public class GitAdapter extends VCSAdapter {
             log.debug("", e);
         } catch (GitAPIException e) {
             log.debug("FUCK! We are doomed!", e);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        } catch (CoreException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
         }
     }
 
@@ -236,7 +249,7 @@ public class GitAdapter extends VCSAdapter {
     public VCSResourceInfo getResourceInfo(
         org.eclipse.core.resources.IResource resource) {
         return new VCSResourceInfo(getUrl(resource),
-            getRevisionString(resource));
+            getRevisionString(resource), getBranchName(resource));
     }
 
     @Override
@@ -252,7 +265,8 @@ public class GitAdapter extends VCSAdapter {
             url = repo.getConfig().getString("remote", name, "url");
         }
         try {
-            return new VCSResourceInfo(url, repo.resolve(Constants.HEAD).name());
+            return new VCSResourceInfo(url,
+                repo.resolve(Constants.HEAD).name(), repo.getBranch());
         } catch (RevisionSyntaxException e) {
             log.debug("Constant was not correctly formatted. WTF???", e);
         } catch (AmbiguousObjectException e) {
@@ -346,5 +360,17 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public String getUrl(de.fu_berlin.inf.dpp.filesystem.IResource resource) {
         return getUrl(ResourceAdapterFactory.convertBack(resource));
+    }
+
+    @Override
+    public String getBranchName(IResource resource) {
+        Repository repo = getGitRepoForResource(resource);
+        try {
+            return repo.getBranch();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            log.debug("", e);
+        }
+        return "";
     }
 }

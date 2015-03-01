@@ -77,6 +77,8 @@ public abstract class VCSAdapter implements VCSProvider {
         return syncInfo.getLocalContentIdentifier();
     }
 
+    public abstract String getBranchName(IResource resource);
+
     /**
      * @param resource
      * @return The URL of the repository root of this resource as a String, or
@@ -108,19 +110,20 @@ public abstract class VCSAdapter implements VCSProvider {
      * 
      * @param resource
      * @param targetRevision
+     * @param targetBranch TODO
      * @param monitor
      *            must not be null.
      */
     public abstract void update(IResource resource, String targetRevision,
-        IProgressMonitor monitor);
+        String targetBranch, IProgressMonitor monitor);
 
     /**
      * Switches the resource to the specified URL and revision.
-     * 
      * @param monitor
+     * @param branch TODO
      */
     public abstract void switch_(IResource resource, String url,
-        String revision, IProgressMonitor monitor);
+        String revision, IProgressMonitor monitor, String branch);
 
     /**
      * Reverts the local changes to the resource.

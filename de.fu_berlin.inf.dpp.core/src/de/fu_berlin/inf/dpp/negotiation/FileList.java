@@ -375,6 +375,18 @@ public class FileList {
         return metaData.vcsInfo == null ? null : metaData.vcsInfo.getURL();
     }
 
+    public String getVCSBranch(String path) {
+        if (path.isEmpty())
+            return vcsProjectInfo.getBranch();
+
+        MetaData metaData = root.getMetaData(path);
+
+        if (metaData == null)
+            return null;
+
+        return metaData.vcsInfo == null ? null : metaData.vcsInfo.getBranch();
+    }
+
     /**
      * Creates an empty file list.
      */

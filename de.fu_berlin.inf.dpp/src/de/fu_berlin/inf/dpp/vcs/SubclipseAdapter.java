@@ -203,7 +203,7 @@ class SubclipseAdapter extends VCSAdapter {
 
     @Override
     public void update(IResource resource, String revisionString,
-        IProgressMonitor monitor) {
+        String targetBranch, IProgressMonitor monitor) {
         if (isAddedToVersionControl(revisionString)) {
             addToVersionControl(resource);
             return;
@@ -280,18 +280,18 @@ class SubclipseAdapter extends VCSAdapter {
     @Override
     public VCSResourceInfo getResourceInfo(IResource resource) {
         return new VCSResourceInfo(getUrl(resource),
-            getRevisionString(resource));
+            getRevisionString(resource), getBranchName(resource));
     }
 
     @Override
     public VCSResourceInfo getCurrentResourceInfo(IResource resource) {
         return new VCSResourceInfo(getUrl(resource),
-            getCurrentRevisionString(resource));
+            getCurrentRevisionString(resource), getBranchName(resource));
     }
 
     @Override
     public void switch_(IResource resource, String url, String revisionString,
-        IProgressMonitor monitor) {
+        IProgressMonitor monitor, String branch) {
         if (resource == null)
             return;
         if (isAddedToVersionControl(revisionString)) {
@@ -476,5 +476,10 @@ class SubclipseAdapter extends VCSAdapter {
     @Override
     public String getUrl(de.fu_berlin.inf.dpp.filesystem.IResource resource) {
         return getUrl(ResourceAdapterFactory.convertBack(resource));
+    }
+
+    @Override
+    public String getBranchName(IResource resource) {
+        return "";
     }
 }

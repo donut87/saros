@@ -9,6 +9,7 @@ public final class VCSResourceInfo {
 
     private final String url;
     private final String revision;
+    private final String branch;
 
     /**
      * Creates a new VCSResourceInfo object with the given URL and revision.
@@ -16,9 +17,11 @@ public final class VCSResourceInfo {
      * @param url
      * @param revision
      */
-    public VCSResourceInfo(final String url, final String revision) {
+    public VCSResourceInfo(final String url, final String revision,
+        String branch) {
         this.url = url;
         this.revision = revision;
+        this.branch = branch;
     }
 
     /**
@@ -67,5 +70,9 @@ public final class VCSResourceInfo {
     @Override
     public String toString() {
         return url + "@" + revision;
+    }
+
+    public String getBranch() {
+        return branch;
     }
 }

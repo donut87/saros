@@ -321,6 +321,6 @@ public final class TeamC extends StfRemoteObject implements ITeamC {
                 + project.getName() + "\".");
         }
 
-        vcs.switch_(resource, url, revision, new NullProgressMonitor());
+        vcs.switch_(resource, url, revision, new NullProgressMonitor(), null);
     }
 }

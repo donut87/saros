@@ -737,9 +737,9 @@ public class SharedResourcesManager extends AbstractActivityProducer implements
                     } else if (activityType == VCSActivity.Type.DISCONNECT) {
                         vcs.disconnect(project, revision != null, progress);
                     } else if (activityType == VCSActivity.Type.SWITCH) {
-                        vcs.switch_(resource, url, revision, progress);
+                        vcs.switch_(resource, url, revision, progress, null);
                     } else if (activityType == VCSActivity.Type.UPDATE) {
-                        vcs.update(resource, revision, progress);
+                        vcs.update(resource, revision, null, progress);
                     } else {
                         log.error("VCS activity type not implemented yet.");
                     }
