@@ -122,10 +122,8 @@ public class GitAdapter extends VCSAdapter {
             Git git = clone.call();
             git.reset().setRef(fileList.getVCSRevision(""));
         } catch (CoreException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         }
         return project;
@@ -145,22 +143,16 @@ public class GitAdapter extends VCSAdapter {
                 .setStartPoint(targetRevision);
             Ref call = checkout.call();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (JGitInternalException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (InvalidRemoteException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (RefAlreadyExistsException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (RefNotFoundException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (InvalidRefNameException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         }
         try {
@@ -368,7 +360,6 @@ public class GitAdapter extends VCSAdapter {
         try {
             return repo.getBranch();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         }
         return "";
