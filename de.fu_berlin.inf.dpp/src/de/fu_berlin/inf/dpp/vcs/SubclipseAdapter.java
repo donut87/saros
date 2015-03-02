@@ -89,7 +89,7 @@ class SubclipseAdapter extends VCSAdapter {
         String url = info.getURL();
         String revision = getCurrentRevisionString(resource);
         return VCSActivity.switch_(sarosSession,
-            ResourceAdapterFactory.create(resource), url, revision);
+            ResourceAdapterFactory.create(resource), url, revision, null);
     }
 
     @Override
@@ -97,7 +97,7 @@ class SubclipseAdapter extends VCSAdapter {
         IResource resource) {
         String revision = getCurrentRevisionString(resource);
         return VCSActivity.update(sarosSession,
-            ResourceAdapterFactory.create(resource), revision);
+            ResourceAdapterFactory.create(resource), revision, null);
     }
 
     public String getCurrentRevisionString(IResource resource) {

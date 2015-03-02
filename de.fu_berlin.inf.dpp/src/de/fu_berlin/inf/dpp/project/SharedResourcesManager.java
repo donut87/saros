@@ -374,7 +374,7 @@ public class SharedResourcesManager extends AbstractActivityProducer implements
                     repositoryString.length());
                 VCSActivity activity = VCSActivity.connect(sarosSession,
                     ResourceAdapterFactory.create(project), repositoryString,
-                    directory, vcs.getProviderID(project));
+                    directory, vcs.getProviderID(project), null);
                 pendingActivities.enter(activity);
                 sharedProject.updateVcsUrl(info.getURL());
                 sharedProject.updateRevision(info.getRevision());

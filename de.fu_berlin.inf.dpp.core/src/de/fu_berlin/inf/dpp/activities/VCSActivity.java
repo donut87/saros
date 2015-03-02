@@ -61,6 +61,7 @@ public class VCSActivity extends AbstractResourceActivity {
     protected Type type;
 
     public Vector<IResourceActivity> containedActivity = new Vector<IResourceActivity>();
+    private String branch;
 
     /**
      * 
@@ -86,7 +87,7 @@ public class VCSActivity extends AbstractResourceActivity {
      *            ).
      */
     public VCSActivity(User source, Type type, SPath path, String url,
-        String directory, String param1) {
+        String directory, String param1, String branch) {
 
         super(source, path);
 
@@ -94,41 +95,46 @@ public class VCSActivity extends AbstractResourceActivity {
         this.url = url;
         this.directory = directory;
         this.param1 = param1;
+        this.branch = branch;
     }
 
     /**
      * Internal ctor used by the builder methods
+     * 
+     * @param branch
+     *            TODO
      */
     private VCSActivity(Type type, ISarosSession sarosSession,
-        IResource resource, String url, String directory, String param1) {
+        IResource resource, String url, String directory, String param1,
+        String branch) {
         this(sarosSession != null ? sarosSession.getLocalUser() : null, type,
             resource != null ? new SPath(resource) : null, url, directory,
-            param1);
+            param1, branch);
     }
 
     public static VCSActivity connect(ISarosSession sarosSession,
-        IProject project, String url, String directory, String providerID) {
+        IProject project, String url, String directory, String providerID, String branch) {
         return new VCSActivity(Type.CONNECT, sarosSession, project, url,
-            directory, providerID);
+            directory, providerID, branch);
     }
 
     public static VCSActivity disconnect(ISarosSession sarosSession,
         IProject project, boolean deleteContents) {
         String param1 = deleteContents ? "" : null;
         return new VCSActivity(Type.DISCONNECT, sarosSession, project, null,
-            null, param1);
+            null, param1, branch);
     }
 
     public static VCSActivity update(ISarosSession sarosSession,
-        IResource resource, String revision) {
+        IResource resource, String revision, String branch) {
         return new VCSActivity(Type.UPDATE, sarosSession, resource, null, null,
-            revision);
+            revision, branch);
     }
 
     public static VCSActivity switch_(ISarosSession sarosSession,
-        IResource resource, String url, String revision) {
+        IResource resource, String url, String revision, String branch) {
         return new VCSActivity(Type.SWITCH, sarosSession, resource, url, null,
-            revision);
+            revision, branch);
     }
 
     @Override

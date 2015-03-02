@@ -304,14 +304,37 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public VCSActivity getUpdateActivity(ISarosSession sarosSession,
         org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
+        VCSResourceInfo info = getResourceInfo(resource);
+        try {
+            Repository repo = getGitRepoForResource(resource);
+            String revision = repo.resolve(Constants.HEAD).getName();
+            String branch = repo.getBranch();
+            return VCSActivity.update(sarosSession,
+                ResourceAdapterFactory.create(resource), revision, branch);
+        } catch (AmbiguousObjectException e) {
+            log.debug("", e);
+        } catch (IOException e) {
+            log.debug("", e);
+        }
         return null;
     }
 
     @Override
     public VCSActivity getSwitchActivity(ISarosSession sarosSession,
         org.eclipse.core.resources.IResource resource) {
-        // TODO Auto-generated method stub
+        VCSResourceInfo info = getResourceInfo(resource);
+        try {
+            String url = info.getURL();
+            Repository repo = getGitRepoForResource(resource);
+            String revision = repo.resolve(Constants.HEAD).getName();
+            String branch = repo.getBranch();
+            return VCSActivity.switch_(sarosSession,
+                ResourceAdapterFactory.create(resource), url, revision, branch);
+        } catch (AmbiguousObjectException e) {
+            log.debug("", e);
+        } catch (IOException e) {
+            log.debug("", e);
+        }
         return null;
     }
 
