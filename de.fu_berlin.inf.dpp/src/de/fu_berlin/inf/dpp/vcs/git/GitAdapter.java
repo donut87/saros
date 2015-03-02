@@ -174,9 +174,14 @@ public class GitAdapter extends VCSAdapter {
         Git git = new Git(gitRepo);
         try {
             FetchResult call = git.fetch().call();
+            // there should be a stash here instead of a reset!!!
             git.reset().setMode(ResetType.HARD).call();
             Ref checkoutCall = git.checkout().setName(branch).call();
             resource.refreshLocal(IResource.DEPTH_INFINITE, null);
+            if (!git.getRepository().resolve(Constants.HEAD).name()
+                .equals(revision)) {
+                git.reset().setMode(ResetType.HARD).setRef(revision).call();
+            }
         } catch (RefAlreadyExistsException e) {
             // Cannot happen. We are not creating a new branch here.
             log.debug("", e);
