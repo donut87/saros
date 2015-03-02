@@ -85,14 +85,15 @@ public class GitAdapter extends VCSAdapter {
 
     @Override
     public boolean isManaged(org.eclipse.core.resources.IResource resource) {
-        // return getGitRepoForResource(resource) != null;
+        return getGitRepoForResource(resource) != null;
         // return true;
-        IProject project = resource.getProject();
-        if (!RepositoryProvider.isShared(project)) {
-            return false;
-        }
-        return RepositoryProvider.getProvider(project).getID()
-            .equals(identifier);
+        // Repository gitRepoForResource = getGitRepoForResource(resource);
+        // IProject project = resource.getProject();
+        // if (!RepositoryProvider.isShared(project)) {
+        // return false;
+        // }
+        // return RepositoryProvider.getProvider(project).getID()
+        // .equals(identifier);
     }
 
     @Override
@@ -132,13 +133,13 @@ public class GitAdapter extends VCSAdapter {
     @Override
     public void update(org.eclipse.core.resources.IResource resource,
         String targetRevision, String targetBranch, IProgressMonitor monitor) {
-        // In git this is of course 'git reset'
+        // In git this is of course exactly the same as 'switch'
         Repository repo = getGitRepoForResource(resource);
         Git git = new Git(repo);
         try {
+            // a stash would be way cooler here...
+            git.reset().setMode(ResetType.HARD).call();
             git.fetch().call(); // update current tree
-            git.reset().setMode(ResetType.HARD).call(); // reset so that the
-                                                        // checkout works
             CheckoutCommand checkout = git.checkout().setName(targetBranch)
                 .setStartPoint(targetRevision);
             Ref call = checkout.call();
@@ -195,10 +196,8 @@ public class GitAdapter extends VCSAdapter {
         } catch (GitAPIException e) {
             log.debug("FUCK! We are doomed!", e);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         } catch (CoreException e) {
-            // TODO Auto-generated catch block
             log.debug("", e);
         }
     }

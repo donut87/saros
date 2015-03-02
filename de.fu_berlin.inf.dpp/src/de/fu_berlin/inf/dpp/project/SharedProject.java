@@ -113,6 +113,9 @@ public class SharedProject {
         protected UpdatableValue<String> vcsRevision = new UpdatableValue<String>(
             null);
 
+        protected UpdatableValue<String> vcsBranchName = new UpdatableValue<String>(
+            null);
+
         @Override
         public String toString() {
             return format("R[{0}@{1}]", vcsUrl.toString(),
@@ -293,6 +296,17 @@ public class SharedProject {
     /** Updates the current VCS revision, and returns true if the value changed. */
     public boolean updateRevision(String newValue) {
         return updateRevision(project, newValue);
+    }
+
+    public boolean updateBranch(String newValue) {
+        return updateBranch(project, newValue);
+    }
+
+    public boolean updateBranch(IResource resource, String newValue) {
+        checkResource(resource);
+        IPath path = resource.getProjectRelativePath();
+        ResourceInfo resourceInfo = resourceMap.get(path);
+        return resourceInfo.vcsBranchName.update(newValue);
     }
 
     /** Updates the current VCS revision, and returns true if the value changed. */

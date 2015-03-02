@@ -109,6 +109,7 @@ public class SubclipseProjectDeltaVisitor extends ProjectDeltaVisitor {
         VCSResourceInfo info = vcs.getResourceInfo(resource);
         sharedProject.updateVcsUrl(resource, info.getURL());
         sharedProject.updateRevision(resource, info.getRevision());
+        sharedProject.updateBranch(resource, info.getBranch());
     }
 
 }
